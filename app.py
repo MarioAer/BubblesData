@@ -201,7 +201,7 @@ class BubbleMessage(db.Model):
         return '<BubbleMessage %r>' % self.id
 
 
-db.drop_all()
+#db.drop_all()
 db.create_all()
 
 manager = APIManager(app, flask_sqlalchemy_db=db)
