@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Login</h1>
+<form method="POST">
+  {{ form.hidden_tag() }}  {# Renders any hidden fields, including the CSRF #}
+  {% for field in form if field.widget.input_type != 'hidden' %}
+    <div class="field">
+      {{ field.label }} {{ field }}
+    </div>
+    {% if field.errors %}
+      {% for error in field.errors %}
+        <div class="field_error">{{ error }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+  <input type="submit" value="Go">
+</form>
+{% endblock %}
