@@ -40,7 +40,7 @@ class BubblesUser(db.Model):
     quests = db.relationship('BubblesQuest', backref='bubbles_users', lazy='dynamic')
 
     def __repr__(self):
-        return '<User %r>' % self.id
+        return '<User: ' + str(self.name) + ' - Id: ' + str(self.id) + '>'
 
 
 class BubblesBubble(db.Model):
@@ -55,7 +55,7 @@ class BubblesBubble(db.Model):
     resources = db.relationship('BubblesResource', backref='bubbles_bubbles', uselist=False, lazy='select')
 
     def __repr__(self):
-        return '<Bubble %r>' % self.id
+        return '<BubbleId: ' + str(self.id) + '>'
 
 
 class BubblesMetaGlobal(db.Model):
@@ -65,7 +65,7 @@ class BubblesMetaGlobal(db.Model):
     content = db.Column(db.Text, nullable=False)
 
     def __repr__(self):
-        return '<BubblesMetaGlobal %r>' % self.name
+        return '<BubblesMetaGlobal %r>' % str(self.name)
 
 
 class BubblesPage(db.Model):
@@ -87,7 +87,7 @@ class BubblesMetaLocal(db.Model):
     content = db.Column(db.String, nullable=False)
 
     def __repr__(self):
-        return '<BubblesMetaLocal %r>' % self.name
+        return '<BubblesMetaLocal %r>' % str(self.name)
 
 
 bubbles_project_resource = db.Table('bubbles_project_resource',
@@ -107,7 +107,7 @@ class BubblesProject(db.Model):
                                 backref=db.backref('bubbles_projects', lazy='dynamic'))
 
     def __repr__(self):
-        return '<BubblesProject %r>' % self.id
+        return '<BubblesProject %r>' % str(self.id)
 
 
 class BubblesQuest(db.Model):
@@ -122,7 +122,7 @@ class BubblesQuest(db.Model):
     language = db.Column(db.String(45), default="null")
 
     def __repr__(self):
-        return '<BubblesQuest %r>' % self.id
+        return '<BubblesQuestId %r>' % str(self.id)
 
 
 class BubblesResource(db.Model):
@@ -134,7 +134,7 @@ class BubblesResource(db.Model):
     bubble = db.Column(db.Integer, db.ForeignKey('bubbles_bubbles.id'))
 
     def __repr__(self):
-        return '<BubblesResource %r>' % self.id
+        return '<BubblesResourceId %r>' % str(self.id)
 
 
 class BubblesSettingCms(db.Model):
