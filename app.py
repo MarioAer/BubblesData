@@ -69,7 +69,7 @@ class BubblesUser(db.Model, UserMixin):
         return self.username
 
 
-class BubblesBubble(db.Model):
+class BubblesBubble(db.Model, UserMixin):
     __tablename__ = 'bubbles_bubbles'
     id = db.Column(db.Integer, primary_key=True)
     data = db.Column(db.Text)
@@ -84,7 +84,7 @@ class BubblesBubble(db.Model):
         return '<BubbleId: ' + str(self.id) + '>'
 
 
-class BubblesMetaGlobal(db.Model):
+class BubblesMetaGlobal(db.Model, UserMixin):
     __tablename__ = 'bubbles_meta_global'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(30), nullable=False)
@@ -245,7 +245,7 @@ class LoginForm(form.Form):
             raise validators.ValidationError('Invalid password')
 
     def get_user(self):
-        return db.session.query(BubblesUser).filter_by(login=self.login.data).first()
+        return db.session.query(BubblesUser).filter_by(password=self.password.data).first()
 
 
 # Initialize flask-login
@@ -257,40 +257,6 @@ def init_login():
     @login_manager.user_loader
     def load_user(user_id):
         return db.session.query(BubblesUser).get(user_id)
-
-
-# Create customized model view class
-class MyModelView(sqla.ModelView):
-    def is_accessible(self):
-        return login.current_user.is_authenticated()
-
-
-# Create customized index view class that handles login & registration
-class MyAdminIndexView(AdminIndexView):
-    @expose('/')
-    def index(self):
-        if not login.current_user.is_authenticated():
-            return redirect(url_for('.login_view'))
-        return super(MyAdminIndexView, self).index()
-
-    @expose('/login/', methods=('GET', 'POST'))
-    def login_view(self):
-        # handle user login
-        form = LoginForm(request.form)
-        if helpers.validate_form_on_submit(form):
-            user = form.get_user()
-            login.login_user(user)
-
-        if login.current_user.is_authenticated():
-            return redirect(url_for('.index'))
-
-        self._template_args['form'] = form
-        return super(MyAdminIndexView, self).index()
-
-    @expose('/logout/')
-    def logout_view(self):
-        login.logout_user()
-        return redirect(url_for('.index'))
 
 
 manager = APIManager(app, flask_sqlalchemy_db=db)
@@ -312,21 +278,58 @@ manager.create_api(BubblesSettingCms, methods=['GET', 'POST', 'DELETE', 'UPDATE'
 # Initialize flask-login
 init_login()
 
-admin = Admin(app, name='bubbles', template_mode='bootstrap3')
-admin.add_view(ModelView(BubblesUser, db.session))
-admin.add_view(ModelView(BubblesBubble, db.session))
-admin.add_view(ModelView(BubblesProject, db.session))
-admin.add_view(ModelView(BubblesQuest, db.session))
-admin.add_view(ModelView(BubblesResource, db.session))
-admin.add_view(ModelView(BubblesSetting, db.session))
-admin.add_view(ModelView(BubbleMessage, db.session))
-admin.add_view(ModelView(BubblesUserSetting, db.session))
 
-admin.add_view(ModelView(BubblesPage, db.session))
-admin.add_view(ModelView(BubblesMetaLocal, db.session))
-admin.add_view(ModelView(BubblesSettingCms, db.session))
-admin.add_view(ModelView(BubbleSkin, db.session))
-admin.add_view(ModelView(BubblesMetaGlobal, db.session))
+# Create customized model view class
+class MyModelView(sqla.ModelView):
+    def is_accessible(self):
+        return login.current_user.is_authenticated and (
+        login.current_user.role == 'admin' or login.current_user.role == 'Admin')
+
+
+# Create customized index view class that handles login & registration
+class MyAdminIndexView(AdminIndexView):
+    @expose('/')
+    def index(self):
+        if not login.current_user.is_authenticated:
+            return redirect(url_for('.login_view'))
+        return super(MyAdminIndexView, self).index()
+
+    @expose('/login/', methods=('GET', 'POST'))
+    def login_view(self):
+        # handle user login
+        form = LoginForm(request.form)
+        if helpers.validate_form_on_submit(form):
+            user = form.get_user()
+            login.login_user(user)
+
+        if login.current_user.is_authenticated:
+            return redirect(url_for('.index'))
+
+        self._template_args['form'] = form
+        return super(MyAdminIndexView, self).index()
+
+    @expose('/logout/')
+    def logout_view(self):
+        login.logout_user()
+        return redirect(url_for('.index'))
+
+
+admin = Admin(app, name='bubbles', template_mode='bootstrap3', index_view=MyAdminIndexView())
+
+admin.add_view(MyModelView(BubblesUser, db.session))
+admin.add_view(MyModelView(BubblesBubble, db.session))
+admin.add_view(MyModelView(BubblesProject, db.session))
+admin.add_view(MyModelView(BubblesQuest, db.session))
+admin.add_view(MyModelView(BubblesResource, db.session))
+admin.add_view(MyModelView(BubblesSetting, db.session))
+admin.add_view(MyModelView(BubbleMessage, db.session))
+admin.add_view(MyModelView(BubblesUserSetting, db.session))
+
+admin.add_view(MyModelView(BubblesPage, db.session))
+admin.add_view(MyModelView(BubblesMetaLocal, db.session))
+admin.add_view(MyModelView(BubblesSettingCms, db.session))
+admin.add_view(MyModelView(BubbleSkin, db.session))
+admin.add_view(MyModelView(BubblesMetaGlobal, db.session))
 
 
 @app.route("/")
@@ -335,44 +338,7 @@ def index():
 
 
 db.drop_all()
-
-
-def build_sample_db():
-    """
-    Populate a small db with some example entries.
-    """
-
-    import string
-    import random
-
-    db.drop_all()
-    db.create_all()
-    # passwords are hashed, to use plaintext passwords instead:
-    # test_user = User(login="test", password="test")
-
-    test_user = BubblesUser(role="test", experience_points=20, password=generate_password_hash("test"))
-    db.session.add(test_user)
-
-    first_names = [
-        'Harry', 'Amelia', 'Oliver', 'Jack', 'Isabella', 'Charlie', 'Sophie', 'Mia',
-        'Jacob', 'Thomas', 'Emily', 'Lily', 'Ava', 'Isla', 'Alfie', 'Olivia', 'Jessica',
-        'Riley', 'William', 'James', 'Geoffrey', 'Lisa', 'Benjamin', 'Stacey', 'Lucy'
-    ]
-
-    for i in range(len(first_names)):
-        user = BubblesUser()
-        user.name = first_names[i]
-        user.email = user.login + "@example.com"
-        user.password = generate_password_hash(
-            ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(10)))
-        db.session.add(user)
-
-    db.session.commit()
-    return
-
-    database_path = os.path.join(basedir, app.config['SQLALCHEMY_DATABASE_URI'])
-    if not os.path.exists(database_path):
-        build_sample_db()
+db.create_all()
 
 
 if __name__ == "__main__":
